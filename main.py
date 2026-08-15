@@ -2,7 +2,7 @@ import asyncio
 import argparse
 import signal
 import pygame
-import logger_utils
+import common.logger_utils as logger_utils
 
 # Fetch our standardized native logger
 logger = logger_utils.get_logger("Main")
@@ -36,10 +36,10 @@ def load_display_engine(choice):
     """
     if choice == "vinyl":
         logger.info("Display engine selected: vinyl (spinning-vinyl)")
-        from display_engine_spinning_vinyl import NowPlayingDisplay
+        from display.display_engine_spinning_vinyl import NowPlayingDisplay
     else:
         logger.info("Display engine selected: standard")
-        from display_engine import NowPlayingDisplay
+        from display.display_engine import NowPlayingDisplay
     return NowPlayingDisplay
 
 
@@ -66,7 +66,7 @@ class NowPlayingApp:
         NowPlayingDisplay = load_display_engine(display_choice)
 
         # Deferred here (not at module top) so --help / arg parsing stays fast
-        from audio_engine import NowPlayingRecognizer
+        from audio.audio_engine import NowPlayingRecognizer
 
         # 1. Start the Display Engine
         logger.info("Booting Display Engine...")

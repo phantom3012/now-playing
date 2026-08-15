@@ -2,7 +2,8 @@ import os
 import csv
 import warnings
 import numpy as np
-import logger_utils
+import common.logger_utils as logger_utils
+import common.paths as paths
 
 # 1. Permanently mute NumPy's ARM architecture subnormal warnings process-wide!
 warnings.filterwarnings("ignore", message=".*smallest subnormal.*")
@@ -17,14 +18,12 @@ try:
 except ImportError:
     import tensorflow.lite.python.interpreter as tflite
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 class MusicDetector:
     def __init__(self):
         """Initializes the YAMNet TensorFlow Lite model for local audio classification."""
         # Paths to the ML model and class map
-        model_path = os.path.join(BASE_DIR, 'ml-model', '1.tflite')
-        class_map_path = os.path.join(BASE_DIR, 'ml-model', 'yamnet_class_map.csv')
+        model_path = os.path.join(paths.ML_MODEL_DIR, '1.tflite')
+        class_map_path = os.path.join(paths.ML_MODEL_DIR, 'yamnet_class_map.csv')
         
         self.model_loaded = False
         if not os.path.exists(model_path):

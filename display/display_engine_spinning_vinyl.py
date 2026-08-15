@@ -1,20 +1,18 @@
 import os
 import io
-import logger_utils
+import common.logger_utils as logger_utils
 import math
 import asyncio
 import requests
 import pygame
-from screensaver import ClockScreensaver
-from text_scroller import SyncedScrollGroup
+from display.screensaver import ClockScreensaver
+from display.text_scroller import SyncedScrollGroup
+import common.paths as paths
 
 # Force UTF-8 locale to prevent xkbcommon/SDL2 parsing errors on Raspberry Pi
 os.environ['LC_ALL'] = 'C.UTF-8'
 os.environ['LANG'] = 'C.UTF-8'
 logger = logger_utils.get_logger("Display")
-
-# Get the absolute path to the directory containing this script (critical for systemd service)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class NowPlayingDisplay:
     def __init__(self, width=1280, height=720, fullscreen=False):
@@ -126,8 +124,8 @@ class NowPlayingDisplay:
 
     def _init_fonts(self):
         """Loads and scales fonts dynamically based on current display resolution."""
-        font_regular = os.path.join(BASE_DIR, 'resources', 'GoogleSans-VariableFont_GRAD,opsz,wght.ttf')
-        font_italic = os.path.join(BASE_DIR, 'resources', 'GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf')
+        font_regular = os.path.join(paths.RESOURCES_DIR, 'GoogleSans-VariableFont_GRAD,opsz,wght.ttf')
+        font_italic = os.path.join(paths.RESOURCES_DIR, 'GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf')
         
         # Calculate a normalized scale factor based on the current height
         scale_factor = self.height / 720.0
@@ -382,9 +380,9 @@ class NowPlayingDisplay:
         # for r in range(int(size * 0.1), int(size * 0.48), 16):
         #     pygame.draw.circle(vinyl, (0, 0, 0, 0), center, r, width=1)
             
-        # 5. Draw the center hole (Spindle hole)
-        pygame.draw.circle(vinyl, (20, 20, 20, 255), center, int(size * 0.04))
-        pygame.draw.circle(vinyl, (0, 0, 0, 255), center, int(size * 0.04), width=2)
+        # 5. Draw the center hole (Spindle hole) - more realistic, but I'm skipping this for now
+        # pygame.draw.circle(vinyl, (20, 20, 20, 255), center, int(size * 0.04))
+        # pygame.draw.circle(vinyl, (0, 0, 0, 255), center, int(size * 0.04), width=2)
         
         return vinyl
 
