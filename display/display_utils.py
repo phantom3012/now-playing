@@ -91,8 +91,8 @@ def parse_joecolor(joecolor_str):
             colors['s'] = hex_to_rgb(parts[3][:6])
             colors['t'] = hex_to_rgb(parts[4][:6])
             colors['q'] = hex_to_rgb(parts[5][:6])
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error parsing joecolor string: {e}")
     return colors
 
 def force_square_crop(surface):
