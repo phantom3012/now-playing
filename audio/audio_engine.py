@@ -6,11 +6,12 @@ import subprocess
 import math
 import numpy as np
 from shazamio import Shazam
-import logger_utils
+import common.logger_utils as logger_utils
+import common.paths as paths
 
 # Import our separated utilities and ML Engine
-import audio_utils
-from music_detector import MusicDetector
+import audio.audio_utils as audio_utils
+from audio.music_detector import MusicDetector
 
 # Guarantee console won't crash on foreign characters
 audio_utils.force_utf8_console()
@@ -125,8 +126,7 @@ class NowPlayingRecognizer:
 
         # Automatically save a copy of the audio to disk for debugging
         if self.debug_mic and len(raw_audio) > 0:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            debug_path = os.path.join(base_dir, "debug_mic.wav")
+            debug_path = paths.DEBUG_MIC_WAV
             audio_utils.save_debug_wav(raw_audio, target_rate, debug_path)
             
         return raw_audio, target_rate
@@ -180,7 +180,7 @@ class NowPlayingRecognizer:
                     
                 if not raw_audio:
                     error_state = {'is_recognized': False, 'error': 'Mic Error'}
-                    audio_utils.dump_metadata_json(error_state, filepath="now_playing.json")
+                    audio_utils.dump_metadata_json(error_state, filepath=paths.NOW_PLAYING_JSON)
                     
                     if retry_count >= max_retries:
                         logger.error(f"Microphone Error. Stopping after {max_retries} retries.")

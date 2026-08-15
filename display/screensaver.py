@@ -3,8 +3,9 @@ import time
 import random
 import math
 import pygame
-import display_utils as du
+import display.display_utils as du
 from datetime import datetime
+import common.paths as paths
 
 
 class ActiveAlbum:
@@ -118,7 +119,7 @@ class ClockScreensaver:
     def __init__(self, width, height, scale_factor, font_regular, font_italic):
         self.width = width
         self.height = height
-        self.cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'album_cache')
+        self.cache_dir = paths.ALBUM_CACHE_DIR
         os.makedirs(self.cache_dir, exist_ok=True)
         
         # Font safely setup

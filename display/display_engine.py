@@ -5,19 +5,17 @@ import math
 import asyncio
 import requests
 import pygame
-from screensaver import ClockScreensaver
-from text_scroller_wrap import SyncedScrollGroup
-import logger_utils
+from display.screensaver import ClockScreensaver
+from display.text_scroller_wrap import SyncedScrollGroup
+import common.logger_utils as logger_utils
+import common.paths as paths
 
 # Import our refactored standalone utilities
-import display_utils
+import display.display_utils as display_utils
 
 # Force UTF-8 locale to prevent xkbcommon/SDL2 parsing errors on Raspberry Pi
 os.environ['LC_ALL'] = 'C.UTF-8'
 os.environ['LANG'] = 'C.UTF-8'
-
-# Get the absolute path to the directory containing this script
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Fetch our standardized native logger
 logger = logger_utils.get_logger("Display")
@@ -126,8 +124,8 @@ class NowPlayingDisplay:
 
     def _init_fonts(self):
         """Loads and scales fonts dynamically based on current display resolution."""
-        font_regular = os.path.join(BASE_DIR, 'resources', 'GoogleSans-VariableFont_GRAD,opsz,wght.ttf')
-        font_italic = os.path.join(BASE_DIR, 'resources', 'GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf')
+        font_regular = os.path.join(paths.RESOURCES_DIR, 'GoogleSans-VariableFont_GRAD,opsz,wght.ttf')
+        font_italic = os.path.join(paths.RESOURCES_DIR, 'GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf')
         
         scale_factor = self.height / 720.0
         
@@ -268,7 +266,7 @@ class NowPlayingDisplay:
                     else:
                         cache_key = raw_track.get('key', song_dict.get('title'))
                         
-                    display_utils.cache_album_art(cache_key, self.art_surface, BASE_DIR)
+                    display_utils.cache_album_art(cache_key, self.art_surface, paths.PROJECT_ROOT)
                     
                     vinyl_size = int(art_size * 0.95)
                     if vinyl_size % 2 != 0: 

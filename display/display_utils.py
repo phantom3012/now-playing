@@ -4,7 +4,7 @@ import requests
 import io
 import math
 import pygame
-import logger_utils
+import common.logger_utils as logger_utils
 
 # Fetch our standardized native logger
 logger = logger_utils.get_logger("DisplayUtils")

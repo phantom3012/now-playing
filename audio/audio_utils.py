@@ -3,7 +3,7 @@ import os
 import json
 from contextlib import contextmanager
 import ctypes
-import logger_utils
+import common.logger_utils as logger_utils
 
 # Fetch our standardized native logger
 logger = logger_utils.get_logger("AudioUtils")
