@@ -1,0 +1,9 @@
+{
+    "is_recognized": true,
+    "title": "Example Song Title",
+    "artist": "Example Artist",
+    "album": "Example Album",
+    "release_year": "2024",
+    "image_url": "https://example.com/coverart.jpg",
+    "raw_data": {}
+}

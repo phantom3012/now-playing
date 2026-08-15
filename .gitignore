@@ -1,0 +1,29 @@
+# ─── Python ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# ─── Virtual environment ────────────────────────────────
+# Never commit the venv — it's machine-specific and won't work
+# on another Pi. requirements.txt is the portable substitute.
+.venv/
+venv/
+env/
+
+# ─── Runtime state / generated data ─────────────────────
+now_playing.json      
+# live track state, rewritten every recognition attempt
+album_cache/          
+# downloaded album art, regenerated at runtime
+debug_mic.wav         
+# last-captured mic audio (debug dump)
+*.log
+
+# ─── OS / editor cruft ──────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
