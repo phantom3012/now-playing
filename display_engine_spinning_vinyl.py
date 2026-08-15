@@ -248,7 +248,7 @@ class NowPlayingDisplay:
         self.bg_animation_progress = 0.0
 
         # Fetch and format Album Art into a Spinning Vinyl
-        art_url = song_dict.get('cover_art_url')
+        art_url = song_dict.get('cover_art_url') or song_dict.get('image url')
         art_size = int(self.height * 0.55)
         
         if art_url:
@@ -626,6 +626,9 @@ class NowPlayingDisplay:
             self.fade_overlay.set_alpha(int(self.fade_alpha))
             self.screen.blit(self.fade_overlay, (0, 0))
 
+        flipped = pygame.transform.flip(self.screen, True, True)
+        self.screen.blit(flipped, (0,0))
+        
         pygame.display.flip()
 
 # --- INTEGRATION TEST BLOCK ---
