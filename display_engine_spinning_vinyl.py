@@ -54,6 +54,11 @@ class NowPlayingDisplay:
         self.status_message = ""
         self.pulse_progress = 0.0 # Heartbeat animation counter
         
+        # Refresh Spinner State
+        self.is_refreshing = False
+        self.spinner_angle = 0.0
+        self.refresh_retry = ""
+        
         # Cached UI Overlay & Glow (MASSIVE PERFORMANCE BOOST)
         self.glow_base = self._generate_glow_base()
         self.ui_overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
@@ -172,6 +177,14 @@ class NowPlayingDisplay:
         self.fade_snapshot = self.screen.copy().convert()
         self.fade_state = 'OUT'
         self.fade_alpha = 0
+        
+    def set_refreshing(self, is_refreshing, retry_text=""):
+        """Toggles the subtle top-right loading spinner for active background scans."""
+        self.is_refreshing = is_refreshing
+        if is_refreshing and retry_text:
+            self.refresh_retry = retry_text
+        elif not is_refreshing:
+            self.refresh_retry = ""
 
     def set_clock(self):
         """Updates the state to the clock screensaver and triggers a fade."""

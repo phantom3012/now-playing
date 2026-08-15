@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import signal
 import pygame
 import logger_utils
 
@@ -265,10 +266,26 @@ class NowPlayingApp:
 
 
 async def main(display_choice=DEFAULT_DISPLAY):
-    app = NowPlayingApp(display_choice=display_choice)
-    await app.run()
+    app = None
+    try:
+        app = NowPlayingApp(display_choice=display_choice)
+        await app.run()
+    finally:
+        try:
+            pygame.quit()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
     args = parse_args()
-    asyncio.run(main(display_choice=args.display))
+    # Translate SIGTERM (what `systemctl restart/stop` sends) into a clean
+    # exit so asyncio unwinds and the finally block runs pygame.quit().
+    def _handle_sigterm(signum, frame):
+        raise KeyboardInterrupt()
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+
+    try:
+        asyncio.run(main(display_choice=args.display))
+    except KeyboardInterrupt:
+        pass
