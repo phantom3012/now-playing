@@ -401,6 +401,67 @@ class NowPlayingDisplay:
             
         return shadow
 
+    def _draw_belt_drive(self, center_x, center_y, art_size):
+        """Draws a motor pulley at the upper-left with a drive belt wrapping the
+        record and pulley. Belt ticks travel to imply motion, synced to the
+        record's clockwise spin."""
+        record_r = art_size // 2
+
+        # --- Motor pulley position (upper-left of the record, in free space) ---
+        pulley_r = max(10, int(art_size * 0.07))
+        pulley_x = center_x - int(art_size * 0.45)
+        pulley_y = center_y - int(art_size * 0.47)
+
+        # --- Belt geometry: wrap both the record and the pulley ---
+        base_angle = math.atan2(pulley_y - center_y, pulley_x - center_x)  # record -> pulley
+
+        # Contact points on the RECORD (fanned around the direction toward the pulley)
+        wrap_spread = math.radians(55)
+        a_top = base_angle + wrap_spread
+        a_bot = base_angle - wrap_spread
+        r_top = (center_x + math.cos(a_top) * record_r, center_y + math.sin(a_top) * record_r)
+        r_bot = (center_x + math.cos(a_bot) * record_r, center_y + math.sin(a_bot) * record_r)
+
+        # Contact points on the PULLEY: fan the two strands around the pulley edge
+        # (same approach as the record) so they're tangent and wrap the pulley's arc.
+        pa = math.atan2(pulley_y - center_y, pulley_x - center_x)  # record -> pulley (same dir as base_angle)
+        pulley_wrap = math.radians(80)  # how far apart the two pulley contacts sit
+        pp_top = pa + pulley_wrap
+        pp_bot = pa - pulley_wrap
+        p_top = (pulley_x + math.cos(pp_top) * pulley_r, pulley_y + math.sin(pp_top) * pulley_r)
+        p_bot = (pulley_x + math.cos(pp_bot) * pulley_r, pulley_y + math.sin(pp_bot) * pulley_r)
+
+        # --- Draw the two belt strands (dark, slightly emphasized) ---
+        pygame.draw.line(self.screen, (25, 25, 28), p_top, r_top, 4)
+        pygame.draw.line(self.screen, (25, 25, 28), p_bot, r_bot, 4)
+
+        # --- Draw the belt wrapping around the far arc of the pulley ---
+        belt_box = pygame.Rect(0, 0, pulley_r * 2, pulley_r * 2)
+        belt_box.center = (pulley_x, pulley_y)
+        # Arc spans the far side of the pulley between the two contact points.
+        # pygame.draw.arc goes counterclockwise from start to end (y is flipped).
+        pygame.draw.arc(self.screen, (25, 25, 28), belt_box, pp_top, pp_bot + 2 * math.pi, 5)
+
+        # --- Traveling belt ticks (motion cue), synced to record spin ---
+        phase = (-self.vinyl_rotation * 0.05) % 1.0
+        num_ticks = 6
+        for strand_a, strand_b in ((p_top, r_top), (r_bot, p_bot)):
+            ax, ay = strand_a
+            bx, by = strand_b
+            for i in range(num_ticks):
+                t = ((i / num_ticks) + phase) % 1.0
+                tx = ax + (bx - ax) * t
+                ty = ay + (by - ay) * t
+                pygame.draw.circle(self.screen, (70, 70, 75), (int(tx), int(ty)), 2)
+
+        # --- Draw the pulley on top (small dark cylinder with a spinning mark) ---
+        pygame.draw.circle(self.screen, (15, 15, 17), (pulley_x, pulley_y), pulley_r)
+        pygame.draw.circle(self.screen, (55, 55, 60), (pulley_x, pulley_y), pulley_r, 2)
+        spin = math.radians(-self.vinyl_rotation * 3.0)
+        mark_x = pulley_x + math.cos(spin) * (pulley_r * 0.5)
+        mark_y = pulley_y + math.sin(spin) * (pulley_r * 0.5)
+        pygame.draw.circle(self.screen, (120, 120, 125), (int(mark_x), int(mark_y)), 2)
+
     def _draw_tone_arm(self, center_x, center_y, art_size):
         """Draws a stylized metallic tone arm resting on the record."""
         # Pivot point (Top Right of the record)
@@ -597,6 +658,9 @@ class NowPlayingDisplay:
                 rotated_vinyl = pygame.transform.rotozoom(self.vinyl_surface, self.vinyl_rotation, 1.0)
                 vinyl_rect = rotated_vinyl.get_rect(center=(center_x, center_y))
                 self.screen.blit(rotated_vinyl, vinyl_rect)
+                
+                # Draw the belt drive (motor pulley + belt) on top of the record edge
+                self._draw_belt_drive(center_x, center_y, art_size)
                 
                 # Draw the tone arm resting on the record
                 self._draw_tone_arm(center_x, center_y, art_size)
