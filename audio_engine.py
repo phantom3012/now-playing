@@ -232,15 +232,28 @@ class NowPlayingRecognizer:
             except Exception as e:
                 error_state = {'is_recognized': False, 'error': str(e)}
                 audio_utils.dump_metadata_json(error_state, filepath="now_playing.json")
-                
+
+                # Detect network/DNS failures to append a "No internet connection" sub-line
+                err_text = str(e).lower()
+                is_network_error = any(sig in err_text for sig in (
+                    "name resolution",
+                    "cannot connect",
+                    "temporary failure",
+                    "connection reset",
+                    "network is unreachable",
+                    "failed to resolve",
+                    "getaddrinfo",
+                ))
+                sub_line = "\nNo internet connection" if is_network_error else ""
+
                 if retry_count >= max_retries:
-                    logger.error(f"Hardware Error. Stopping after {max_retries} retries. ({e})")
-                    update_status(f"Hardware Error. Stopping after {max_retries} retries.", fade=False)
+                    logger.error(f"Error. Stopping after {max_retries} retries. ({e})")
+                    update_status(f"Error! Stopping after {max_retries} retries.{sub_line}", fade=False)
                     return error_state
-                
+
                 retry_count += 1
                 logger.error(f"Error during recognition request: {e}. Retrying... ({retry_count}/{max_retries})")
-                update_status(f"Error! Retrying... ({retry_count}/{max_retries})", fade=False)
+                update_status(f"Error! Retrying... ({retry_count}/{max_retries}){sub_line}", fade=False)
                 await asyncio.sleep(1)
 
         return {'is_recognized': False, 'error': 'Max retries reached'}

@@ -47,6 +47,7 @@ class MusicDetector:
     def _load_music_classes(self, csv_path):
         """Loads and filters target music-related class IDs from YAMNet metadata."""
         music_indices = set()
+        self.class_names = {}
         if not os.path.exists(csv_path):
             logger.warning("Class map file missing! Defaulting class filters.")
             return {132, 133, 134, 135, 136, 137}
@@ -58,6 +59,8 @@ class MusicDetector:
                 for row in reader:
                     if len(row) >= 3:
                         index = int(row[0])
+                        # Keep the original-cased name for readable logging
+                        self.class_names[index] = row[2]
                         display_name = row[2].lower()
                         if 'music' in display_name or 'instrument' in display_name or 'song' in display_name or 'singing' in display_name:
                             music_indices.add(index)
@@ -138,7 +141,8 @@ class MusicDetector:
             
             # 6. Match top index against loaded music categories
             if top_class_index in self.music_classes and top_score > 0.15:
-                logger.success(f"ML Match Detected! Category Index: {top_class_index} (Confidence: {top_score:.2f})")
+                category_name = getattr(self, 'class_names', {}).get(top_class_index, "Unknown")
+                logger.success(f"ML Match Detected! Category: {category_name} ({top_class_index}) (Confidence: {top_score:.2f})")
                 return True
                 
         except Exception as e:
