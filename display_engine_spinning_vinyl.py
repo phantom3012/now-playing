@@ -67,7 +67,7 @@ class NowPlayingDisplay:
         # Two-Phase Fade Animation Variables
         self.fade_state = 'NONE'  # 'NONE', 'OUT', 'IN'
         self.fade_alpha = 0
-        self.fade_speed = 35 
+        self.fade_speed = 15 
         self.fade_overlay = pygame.Surface((self.width, self.height)).convert()
         self.fade_overlay.fill((20, 20, 20)) # Dark gray to match the background
         self.fade_snapshot = None # Holds a flat image of the screen to optimize fading
@@ -131,9 +131,9 @@ class NowPlayingDisplay:
         scale_factor = self.height / 720.0
         
         # Define base sizes at 720p
-        base_t_size = 50 
-        base_a_size = 33
-        base_m_size = 23
+        base_t_size = 64 
+        base_a_size = 48
+        base_m_size = 36
         
         # Calculate final sizes
         t_size = int(base_t_size * scale_factor)
@@ -533,7 +533,7 @@ class NowPlayingDisplay:
                 self.screen.fill((20, 20, 20))
                 self.screen.blit(self.ui_overlay, (0, 0))
             else:
-                self.pulse_progress += 0.1 
+                self.pulse_progress += 0.05 
                 pulse = (math.sin(self.pulse_progress) + 1) / 2
                 self.screen.fill((10, 10, 12))
                 
