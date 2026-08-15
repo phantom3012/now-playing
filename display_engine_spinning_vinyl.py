@@ -498,6 +498,20 @@ class NowPlayingDisplay:
         pygame.draw.polygon(self.screen, (25, 25, 25), [p1, p2, p3, p4])
         pygame.draw.circle(self.screen, (220, 40, 40), (int(p3[0] + p4[0]) // 2, int(p3[1] + p4[1]) // 2), 4)
 
+        # --- Counterweight: short rod extending BEHIND the pivot, opposite the needle ---
+        back_len = int(art_size * 0.14)
+        cw_x = pivot_x - dx * back_len   # dx/dy point pivot->needle, so -dx goes behind
+        cw_y = pivot_y - dy * back_len
+        # Back rod
+        pygame.draw.line(self.screen, (150, 150, 150), (pivot_x, pivot_y), (cw_x, cw_y), 7)
+        pygame.draw.line(self.screen, (220, 220, 220), (pivot_x, pivot_y), (cw_x, cw_y), 2)
+        # Counterweight cylinder (dark, slightly larger than the rod)
+        cw_r = max(9, int(art_size * 0.05))
+        pygame.draw.circle(self.screen, (20, 20, 22), (int(cw_x), int(cw_y)), cw_r)
+        pygame.draw.circle(self.screen, (70, 70, 75), (int(cw_x), int(cw_y)), cw_r, 2)
+        # Small highlight to imply a rounded metal weight
+        pygame.draw.circle(self.screen, (110, 110, 115), (int(cw_x - cw_r * 0.3), int(cw_y - cw_r * 0.3)), max(2, cw_r // 4))
+
     # ---------------------------------------------------------
     # UTILITY METHODS
     # ---------------------------------------------------------
