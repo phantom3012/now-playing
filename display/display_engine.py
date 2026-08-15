@@ -6,7 +6,7 @@ import asyncio
 import requests
 import pygame
 from display.screensaver import ClockScreensaver
-from display.text_scroller_wrap import SyncedScrollGroup
+from display.text_scroller import SyncedScrollGroup
 import common.logger_utils as logger_utils
 import common.paths as paths
 
