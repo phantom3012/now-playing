@@ -117,7 +117,8 @@ class NowPlayingDisplay:
             self.width = 1600
             self.height = 900
             
-        self.screen = pygame.display.set_mode((self.width, self.height), flags)
+        self.hardware_screen = pygame.display.set_mode((self.width, self.height), flags)
+        self.screen = pygame.Surface((self.width, self.height)).convert()
         pygame.mouse.set_visible(False)
         pygame.display.set_caption("Now Playing")
 
@@ -173,7 +174,10 @@ class NowPlayingDisplay:
         self.next_display_state = next_state
         self.next_status_message = next_msg
         self.next_song_data = next_song
-        
+
+        if self.fade_state != 'NONE':
+            self._render_live_frame()
+
         self.fade_snapshot = self.screen.copy().convert()
         self.fade_state = 'OUT'
         self.fade_alpha = 0
@@ -189,6 +193,8 @@ class NowPlayingDisplay:
     def set_clock(self):
         """Updates the state to the clock screensaver and triggers a fade."""
         if self.display_state != 'CLOCK':
+            if hasattr(self.screensaver, 'refresh_cache'):
+                self.screensaver.refresh_cache()
             self._trigger_fade('CLOCK')
 
     def set_status(self, message, fade=True):
@@ -219,7 +225,10 @@ class NowPlayingDisplay:
     def _render_idle_overlay(self):
         """Pre-renders the static idle/status screen to the cache."""
         self.ui_overlay.fill((0, 0, 0, 0))
-        text = self.font_artist.render(self.status_message, True, (255, 255, 255))
+        if self.status_message == "Now Playing":
+            text = self.font_title.render(self.status_message, True, (255, 255, 255))
+        else:
+            text = self.font_artist.render(self.status_message, True, (225, 225, 230))
         text_rect = text.get_rect(center=(self.width//2, self.height//2))
         self.ui_overlay.blit(text, text_rect)
 
@@ -248,7 +257,7 @@ class NowPlayingDisplay:
         self.bg_animation_progress = 0.0
 
         # Fetch and format Album Art into a Spinning Vinyl
-        art_url = song_dict.get('cover_art_url') or song_dict.get('image url')
+        art_url = song_dict.get('cover_art_url') or song_dict.get('image_url')
         art_size = int(self.height * 0.55)
         
         if art_url:
@@ -626,9 +635,9 @@ class NowPlayingDisplay:
             self.fade_overlay.set_alpha(int(self.fade_alpha))
             self.screen.blit(self.fade_overlay, (0, 0))
 
-        flipped = pygame.transform.flip(self.screen, True, True)
-        self.screen.blit(flipped, (0,0))
-        
+        flipped_screen = pygame.transform.flip(self.screen, True, True)
+        self.hardware_screen.blit(flipped_screen, (0, 0))
+
         pygame.display.flip()
 
 # --- INTEGRATION TEST BLOCK ---
