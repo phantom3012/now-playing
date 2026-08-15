@@ -1,5 +1,6 @@
 import os
 import io
+import logger_utils
 import math
 import asyncio
 import requests
@@ -10,6 +11,7 @@ from text_scroller import SyncedScrollGroup
 # Force UTF-8 locale to prevent xkbcommon/SDL2 parsing errors on Raspberry Pi
 os.environ['LC_ALL'] = 'C.UTF-8'
 os.environ['LANG'] = 'C.UTF-8'
+logger = logger_utils.get_logger("Display")
 
 # Get the absolute path to the directory containing this script (critical for systemd service)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,24 +22,24 @@ class NowPlayingDisplay:
         
         # --- HARDWARE DISPLAY CONFIGURATION ---
         if not os.environ.get('DISPLAY'):
-            print("[Display] No desktop environment detected (Headless/SSH). Setting kmsdrm...")
+            logger.warning("No desktop environment detected (Headless/SSH). Setting kmsdrm...")
             os.environ['SDL_VIDEODRIVER'] = 'kmsdrm'
             try:
                 pygame.display.init()
-                print("[Display] Video system initialized successfully using driver: kmsdrm")
+                logger.success("Video system initialized successfully using driver: kmsdrm")
             except pygame.error as e:
-                print("\n[FATAL ERROR] Could not initialize kmsdrm video driver.")
-                print("1. Ensure your user has hardware display permissions: sudo usermod -a -G video,render $USER")
-                print("2. The Pygame version from 'pip' might lack Pi hardware support.")
-                print("   Fix this by running: sudo apt-get install python3-pygame")
-                print(f"   Error details: {e}\n")
+                logger.error("[FATAL ERROR] Could not initialize kmsdrm video driver.")
+                logger.error("1. Ensure your user has hardware display permissions: sudo usermod -a -G video,render $USER")
+                logger.error("2. The Pygame version from 'pip' might lack Pi hardware support.")
+                logger.error("   Fix this by running: sudo apt-get install python3-pygame")
+                logger.error(f"   Error details: %s\n",e)
                 raise Exception("kmsdrm video driver not available.")
         else:
             try:
                 pygame.display.init()
-                print(f"[Display] Video system initialized. Using driver: {pygame.display.get_driver()}")
+                logger.success(f"Video system initialized. Using driver: {pygame.display.get_driver()}")
             except pygame.error as e:
-                print(f"\n[FATAL ERROR] Could not initialize video system: {e}\n")
+                logger.error(f"Could not initialize video system: {e}")
                 raise
                 
         pygame.init()
@@ -144,9 +146,9 @@ class NowPlayingDisplay:
             self.font_title = pygame.font.Font(font_regular, t_size)
             self.font_artist = pygame.font.Font(font_regular, a_size)
             self.font_meta = pygame.font.Font(font_italic, m_size)
-            print(f"[Display] Fonts scaled to: Title={t_size}, Artist={a_size}, Meta={m_size}")
+            logger.info(f"Fonts scaled to: Title={t_size}, Artist={a_size}, Meta={m_size}")
         except Exception as e:
-            print(f"[Display] Error loading fonts: {e}")
+            logger.warning(f"Error loading fonts: {e}")
             self.font_title = pygame.font.SysFont('sans-serif', t_size)
             self.font_artist = pygame.font.SysFont('sans-serif', a_size)
             self.font_meta = pygame.font.SysFont('sans-serif', m_size)
@@ -212,7 +214,7 @@ class NowPlayingDisplay:
         if not song_dict or not song_dict.get('is_recognized'):
             return
 
-        print(f"[Display] Queueing UI update for: {song_dict.get('title')}")
+        logger.info(f"Queueing UI update for: {song_dict.get('title')}")
         self._trigger_fade('PLAYING', next_song=song_dict)
         
     def _render_startup_overlay(self):
@@ -287,7 +289,7 @@ class NowPlayingDisplay:
                     self.vinyl_shadow = self._create_circular_shadow(art_size)
                     self.vinyl_rotation = 0.0 # Reset rotation for new song
             except Exception as e:
-                print(f"[Display] Error processing image: {e}")
+                logger.error(f"Error processing image: {e}")
                 self.vinyl_surface = None
                 self.vinyl_shadow = None
         else:
@@ -465,7 +467,7 @@ class NowPlayingDisplay:
                 colors['t'] = NowPlayingDisplay._hex_to_rgb(parts[4][:6]) # Tertiary Text
                 colors['q'] = NowPlayingDisplay._hex_to_rgb(parts[5][:6]) # Quaternary Text
         except Exception as e:
-            print(f"[Display] Error parsing joecolor string: {e}")
+            logger.error(f"Error parsing joecolor string: {e}")
             
         return colors
 
@@ -654,65 +656,3 @@ class NowPlayingDisplay:
         self.hardware_screen.blit(flipped_screen, (0, 0))
 
         pygame.display.flip()
-
-# --- INTEGRATION TEST BLOCK ---
-async def main():
-    try:
-        from audio_engine import NowPlayingRecognizer
-    except ImportError:
-        print("ERROR: Could not import 'audio_engine.py'. Make sure it's in the same folder!")
-        return
-        
-    display = NowPlayingDisplay(fullscreen=True)
-    display.draw_frame() 
-
-    print("[Main] Initializing Audio Engine...")
-    recognizer = NowPlayingRecognizer()
-    
-    await asyncio.sleep(1.5)
-    
-    print("[Main] Testing display. Press ESC to exit.")
-    
-    global running
-    running = True
-
-    async def single_recognition():
-        def update_status(msg):
-            display.set_status(msg)
-            print(f"[Main] {msg}", flush=True)
-
-        song_dict = await recognizer.get_current_song(
-            max_retries=3, 
-            status_callback=update_status
-        )
-        
-        if song_dict and song_dict.get('is_recognized'):
-            print(f"[Main] Recognized! {song_dict['title']} by {song_dict['artist']}", flush=True)
-            display.update_song(song_dict)
-
-    rec_task = asyncio.create_task(single_recognition())
-
-    target_fps = 30
-    frame_time = 1.0 / target_fps
-
-    while running:
-        loop_start = asyncio.get_event_loop().time()
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-                    
-        display.draw_frame()
-        
-        elapsed = asyncio.get_event_loop().time() - loop_start
-        await asyncio.sleep(max(0.001, frame_time - elapsed))
-        
-    rec_task.cancel()
-    recognizer.close()
-    pygame.quit()
-
-if __name__ == "__main__":
-    asyncio.run(main())
