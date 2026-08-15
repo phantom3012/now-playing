@@ -661,7 +661,7 @@ class NowPlayingDisplay:
 
             if self.vinyl_surface:
                 # Rotate record smoothly (Negative value = clockwise spin)
-                self.vinyl_rotation = (self.vinyl_rotation - 0.6) % 360
+                self.vinyl_rotation = (self.vinyl_rotation - 2.5) % 360
                 
                 # Draw the static shadow behind the spinning record
                 if self.vinyl_shadow:
