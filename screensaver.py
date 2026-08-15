@@ -140,6 +140,29 @@ class ClockScreensaver:
         self.last_update_time = time.time()
         self.refresh_cache()
     
+    def _draw_from_bag(self, active_hashes):
+        """Draws the next album from a shuffled bag (each shown once before repeats).
+        Skips images currently on screen; reshuffles a fresh bag when depleted."""
+        if not self.cached_images:
+            return None
+
+        # (Re)build the bag if empty
+        if not getattr(self, 'shuffle_bag', None):
+            self.shuffle_bag = list(self.cached_images)
+            random.shuffle(self.shuffle_bag)
+
+        # Try to pop an image that isn't already on screen
+        for _ in range(len(self.shuffle_bag)):
+            candidate = self.shuffle_bag.pop()
+            if candidate.get('hash') not in active_hashes:
+                return candidate
+            # It's on screen right now; set aside and keep looking
+            self.shuffle_bag.insert(0, candidate)
+
+        # Everything left in the bag is on screen (small pool) — fall back
+        available = [img for img in self.cached_images if img.get('hash') not in active_hashes]
+        return random.choice(available) if available else None
+    
     def refresh_cache(self):
         """Scans the history directory and builds the surface pool."""
         self.cached_images = []
@@ -157,6 +180,9 @@ class ClockScreensaver:
                 self.cached_images.append({'path': f, 'surface': img, 'hash': img_hash})
             except Exception:
                 pass
+        
+        # Reset the shuffle bag so it rebuilds from the freshly loaded cache
+        self.shuffle_bag = []
 
     def _get_valid_position(self, size):
         """Rejection sampling to find an overlapping-free coordinate on the screen."""
@@ -200,7 +226,9 @@ class ClockScreensaver:
         pos = self._get_valid_position(self.album_size)
         if pos:
             x, y = pos
-            img_dict = random.choice(available_images)
+            img_dict = self._draw_from_bag(active_hashes)
+            if img_dict is None:
+                return
             lifespan = random.uniform(11.0, 16.0) 
             self.active_albums.append(ActiveAlbum(img_dict, x, y, self.album_size, lifespan, self.width, self.height))
 
@@ -265,7 +293,9 @@ class ClockScreensaver:
                     break
                     
                 x, y = pos
-                img_dict = random.choice(available_images)
+                img_dict = self._draw_from_bag(active_hashes)
+                if img_dict is None:
+                    break
                 lifespan = random.uniform(11.0, 16.0) 
                 self.active_albums.append(ActiveAlbum(img_dict, x, y, self.album_size, lifespan, self.width, self.height))
 
