@@ -518,25 +518,29 @@ class NowPlayingDisplay:
             self.screensaver.render(self.screen)
 
         elif self.display_state == 'IDLE':
-            self.pulse_progress += 0.1 
-            pulse = (math.sin(self.pulse_progress) + 1) / 2
-            self.screen.fill((10, 10, 12))
-            
-            min_scale = 0.8
-            max_scale = 1.15
-            current_scale = min_scale + (pulse * (max_scale - min_scale))
-            
-            scaled_w = int(self.glow_base.get_width() * current_scale)
-            scaled_h = int(self.glow_base.get_height() * current_scale)
-            
-            current_glow = pygame.transform.scale(self.glow_base, (scaled_w, scaled_h))
-            
-            glow_alpha = int(30 + (pulse * 80)) 
-            current_glow.set_alpha(glow_alpha)
-            
-            glow_rect = current_glow.get_rect(center=(self.width // 2, self.height // 2))
-            self.screen.blit(current_glow, glow_rect)
-            self.screen.blit(self.ui_overlay, (0, 0))
+            if self.status_message == "Now Playing":
+                self.screen.fill((20, 20, 20))
+                self.screen.blit(self.ui_overlay, (0, 0))
+            else:
+                self.pulse_progress += 0.1 
+                pulse = (math.sin(self.pulse_progress) + 1) / 2
+                self.screen.fill((10, 10, 12))
+                
+                min_scale = 0.8
+                max_scale = 1.15
+                current_scale = min_scale + (pulse * (max_scale - min_scale))
+                
+                scaled_w = int(self.glow_base.get_width() * current_scale)
+                scaled_h = int(self.glow_base.get_height() * current_scale)
+                
+                current_glow = pygame.transform.scale(self.glow_base, (scaled_w, scaled_h))
+                
+                glow_alpha = int(30 + (pulse * 80)) 
+                current_glow.set_alpha(glow_alpha)
+                
+                glow_rect = current_glow.get_rect(center=(self.width // 2, self.height // 2))
+                self.screen.blit(current_glow, glow_rect)
+                self.screen.blit(self.ui_overlay, (0, 0))
 
         elif self.display_state == 'PLAYING':
             # 1. Background Gradient Animation
