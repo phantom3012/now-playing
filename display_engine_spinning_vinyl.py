@@ -225,12 +225,23 @@ class NowPlayingDisplay:
     def _render_idle_overlay(self):
         """Pre-renders the static idle/status screen to the cache."""
         self.ui_overlay.fill((0, 0, 0, 0))
-        if self.status_message == "Now Playing":
-            text = self.font_title.render(self.status_message, True, (255, 255, 255))
+
+        # Status may carry a second line (after \n) shown at the bottom center
+        lines = self.status_message.split("\n")
+        main_msg = lines[0]
+        sub_msg = lines[1] if len(lines) > 1 else ""
+
+        if main_msg == "Now Playing":
+            text = self.font_title.render(main_msg, True, (255, 255, 255))
         else:
-            text = self.font_artist.render(self.status_message, True, (225, 225, 230))
+            text = self.font_artist.render(main_msg, True, (225, 225, 230))
         text_rect = text.get_rect(center=(self.width//2, self.height//2))
         self.ui_overlay.blit(text, text_rect)
+
+        if sub_msg:
+            sub_text = self.font_meta.render(sub_msg, True, (200, 120, 120))
+            sub_rect = sub_text.get_rect(center=(self.width//2, self.height - 60))
+            self.ui_overlay.blit(sub_text, sub_rect)
 
     def _apply_song_data(self, song_dict):
         """Processes the song payload and pre-renders the UI elements."""
