@@ -15,9 +15,12 @@ The app runs two things concurrently on an `asyncio` loop:
    ALSA `arecord` process (no PyAudio). Each sample is first screened locally by a
    **YAMNet TensorFlow Lite** model to decide whether music is actually playing —
    this avoids hammering the network when the room is silent. Only when music is
-   confirmed does the app send audio to **Shazam** (via `shazamio`) for cloud
-   recognition. A two-pass check and a "double-dip" (reusing the confirmation
-   sample for the first Shazam query) reduce both false positives and latency.
+   confirmed does the app send audio for cloud recognition via
+   [**ShazamIO**](https://github.com/shazamio/ShazamIO) — a free, third-party
+   asynchronous library built on a reverse-engineered Shazam API (this project does
+   **not** use any official Shazam SDK or API). A two-pass check and a "double-dip"
+   (reusing the confirmation sample for the first recognition query) reduce both
+   false positives and latency.
 
 2. **Display (foreground).** A Pygame engine renders at a target 60 FPS. It shows
    album art with synchronized scrolling title/artist text when a song is matched,
@@ -38,9 +41,9 @@ at the root.
 |------|------|
 | `main.py` | Entry point. Wires the display + audio engines together and runs the async loop. Selects the display engine via the `--display` flag (`standard` / `vinyl`). |
 | **`audio/`** | |
-| `audio/audio_engine.py` | Mic capture (ALSA `arecord`), gain/DSP, Shazam recognition with retries. |
+| `audio/audio_engine.py` | Mic capture (ALSA `arecord`), gain/DSP, ShazamIO cloud recognition with retries. |
 | `audio/music_detector.py` | Local YAMNet TFLite inference — "is this music?" gate before hitting the network. |
-| `audio/audio_utils.py` | ALSA error silencing, UTF-8 console, Shazam metadata parsing, JSON dumps. |
+| `audio/audio_utils.py` | ALSA error silencing, UTF-8 console, ShazamIO metadata parsing, JSON dumps. |
 | **`display/`** | |
 | `display/display_base.py` | `BaseNowPlayingDisplay` — the shared foundation for both engines: driver/font bring-up, the fade state machine, state transitions (clock/status/song), the animated background, text marquee, refresh spinner, and the top-level frame compositing. Concrete engines only implement the left-side artwork. |
 | `display/album_sleeve.py` | Default engine (`AlbumSleeveDisplay`). Shows the album art as a flat sleeve with a spinning record peeking out behind it. |
@@ -61,18 +64,15 @@ between them is how the artwork on the left of the screen is drawn.
 
 | Folder | Contents | In git? |
 |--------|----------|---------|
-| `ml-model/` | YAMNet model (`1.tflite`) + `yamnet_class_map.csv`. Required at runtime. | See note below |
+| `ml-model/` | YAMNet model (`1.tflite`) + `yamnet_class_map.csv`. Required at runtime. | Yes |
 | `resources/` | Fonts and static image assets. | Yes |
 | `album_cache/` | Downloaded album art, cached at runtime. | No (regenerated) |
 | `.venv/` | Local virtual environment. | No (machine-specific) |
 | `__pycache__/` | Python bytecode. | No |
 
-> **Note on `ml-model/`:** the YAMNet TFLite model is required for local music
-> detection. If it's small enough to commit, keep it in the repo (it's included by
-> default in the provided `.gitignore`). If it's large, remove it from git and
-> document the download step here instead. If the model is missing at runtime the
-> app logs a warning and falls back to treating everything as music (it will still
-> run, just less efficiently).
+The YAMNet model in `ml-model/` is required for local music detection. If it is
+missing at runtime, the app logs a warning and falls back to treating all audio as
+music — it still runs, just less efficiently.
 
 ## Hardware
 
@@ -126,11 +126,10 @@ python main.py --display vinyl  # spinning-vinyl engine
 python main.py --help           # list options
 ```
 
-> **Testing tip:** the app draws directly to the framebuffer via `kmsdrm`, and
-> only one process can own the display at a time. When testing by hand, stop the
-> service first (`sudo systemctl stop nowplaying`), and quit your manual run with
-> **ESC** (not Ctrl+C) so Pygame releases the display cleanly before you restart
-> the service.
+The app draws directly to the framebuffer via `kmsdrm`, and only one process can
+own the display at a time. When testing by hand, stop the service first
+(`sudo systemctl stop nowplaying`), and quit the manual run with **ESC** (not
+Ctrl+C) so Pygame releases the display cleanly before the service is restarted.
 
 `run.sh` does the same thing and is what the service calls:
 
@@ -220,5 +219,17 @@ sudo systemctl restart nowplaying
 
 - **`kmsdrm` fails to initialize / black screen:** ensure the user is in the `video` and `render` groups, and prefer the apt Pygame (`sudo apt install python3-pygame`) if the pip build lacks Pi hardware support.
 - **No microphone found:** check `arecord -l`; the engine auto-selects a USB mic and falls back to `default`. Adjust `_auto_detect_alsa_mic` if your device isn't matched.
-- **Shazam errors like `Temporary failure in name resolution`:** the Pi has no network. Recognition needs internet; local ML detection does not.
+- **ShazamIO recognition errors like `Temporary failure in name resolution`:** the Pi has no network. Recognition needs internet; local ML detection does not.
 - **Wi‑Fi/network access:** administer this Pi over SSH (`ssh <user>@<pi-ip>`) rather than relying on the attached display, since the app owns the framebuffer.
+
+## Credits
+
+This project stands on several open-source pieces:
+
+- [**ShazamIO**](https://github.com/shazamio/ShazamIO) — the free, third-party
+  asynchronous library used for cloud song recognition. It is built on a
+  reverse-engineered Shazam API; this project is not affiliated with, endorsed by,
+  or using any official Shazam product or API.
+- **YAMNet** — Google's audio event classification model (TensorFlow Lite), used
+  locally to gate recognition on whether music is actually playing.
+- **Pygame** — the rendering layer, drawing to the framebuffer via `kmsdrm`.
