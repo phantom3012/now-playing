@@ -1,7 +1,5 @@
 import sys
-import os
 import json
-from contextlib import contextmanager
 import ctypes
 import common.logger_utils as logger_utils
 
@@ -47,20 +45,6 @@ def force_utf8_console():
             sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
             sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
-@contextmanager
-def ignore_stderr():
-    """Temporarily mutes stderr to suppress ALSA/PyAudio hardware warnings."""
-    devnull = os.open(os.devnull, os.O_WRONLY)
-    old_stderr = os.dup(2)
-    sys.stderr.flush()
-    os.dup2(devnull, 2)
-    os.close(devnull)
-    try:
-        yield
-    finally:
-        os.dup2(old_stderr, 2)
-        os.close(old_stderr)
-
 def parse_shazam_metadata(shazam_dict):
     """Extracts critical UI strings, image URLs, and the raw payload for joe_colors."""
     if not shazam_dict or 'track' not in shazam_dict:
@@ -101,8 +85,12 @@ def parse_shazam_metadata(shazam_dict):
         'raw_data': shazam_dict  # <-- This passes the joecolor string to the display engine!
     }
 
-def dump_metadata_json(song_dict, filepath="now_playing.json"):
-    """Saves the JSON output for caching or external debugging."""
+def dump_metadata_json(song_dict, filepath):
+    """Saves the JSON output for caching or external debugging.
+
+    filepath is required and should be an absolute path (e.g.
+    paths.NOW_PLAYING_JSON) so the file always lands at the repo root
+    regardless of the process's current working directory."""
     try:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(song_dict, f, indent=4, ensure_ascii=False)

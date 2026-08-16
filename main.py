@@ -10,11 +10,12 @@ logger = logger_utils.get_logger("Main")
 # ==============================================================================
 # DISPLAY ENGINE SELECTION
 #
-# Two interchangeable display engines are available. Both expose the same
-# NowPlayingDisplay class, so they can be swapped freely:
+# Two interchangeable display engines are available. Each subclasses
+# BaseNowPlayingDisplay and is aliased to NowPlayingDisplay on import, so they
+# can be swapped freely:
 #
-#   standard  -> display_engine.py               (default)
-#   vinyl     -> display_engine_spinning_vinyl.py (spinning-vinyl animation)
+#   standard  -> display/album_sleeve.py    (AlbumSleeveDisplay, default)
+#   vinyl     -> display/spinning_vinyl.py  (SpinningVinylDisplay)
 #
 # Choose one at launch with the --display flag, e.g.:
 #
@@ -36,10 +37,10 @@ def load_display_engine(choice):
     """
     if choice == "vinyl":
         logger.info("Display engine selected: vinyl (spinning-vinyl)")
-        from display.display_engine_spinning_vinyl import NowPlayingDisplay
+        from display.spinning_vinyl import SpinningVinylDisplay as NowPlayingDisplay
     else:
         logger.info("Display engine selected: standard")
-        from display.display_engine import NowPlayingDisplay
+        from display.album_sleeve import AlbumSleeveDisplay as NowPlayingDisplay
     return NowPlayingDisplay
 
 

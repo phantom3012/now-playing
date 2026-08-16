@@ -28,22 +28,34 @@ The app runs two things concurrently on an `asyncio` loop:
 Recognized track metadata is written to `now_playing.json` on each attempt, which
 doubles as a debug record of the last result.
 
-### Module overview
+### Project layout
+
+The code is organized into packages by role: `audio/` (capture + recognition),
+`display/` (rendering), and `common/` (shared utilities). The entry point stays
+at the root.
 
 | File | Role |
 |------|------|
 | `main.py` | Entry point. Wires the display + audio engines together and runs the async loop. Selects the display engine via the `--display` flag (`standard` / `vinyl`). |
-| `audio_engine.py` | Mic capture (ALSA `arecord`), gain/DSP, Shazam recognition with retries. |
-| `music_detector.py` | Local YAMNet TFLite inference — "is this music?" gate before hitting the network. |
-| `audio_utils.py` | ALSA error silencing, UTF-8 console, Shazam metadata parsing, JSON dumps. |
-| `display_engine.py` | Default display engine (uses the wrap-around scroller). |
-| `display_engine_spinning_vinyl.py` | Alternate display engine with a spinning-vinyl animation. |
-| `display_utils.py` | Image download/decode, surface signatures, drawing helpers. |
-| `screensaver.py` | Clock + drifting album-cover collage shown when idle. |
-| `text_scroller.py` | Marquee scroller — reverse-at-end variant (used by the vinyl engine). |
-| `text_scroller_copy.py` | Marquee scroller — continuous wrap-around variant (used by the **default** engine). Despite the name, this is **not** a duplicate; both are in use. |
-| `logger_utils.py` | Shared logging config with a custom `SUCCESS` level. |
-| `test.py` | Standalone scratch script (YouTube duration lookup). Not part of the running app. |
+| **`audio/`** | |
+| `audio/audio_engine.py` | Mic capture (ALSA `arecord`), gain/DSP, Shazam recognition with retries. |
+| `audio/music_detector.py` | Local YAMNet TFLite inference — "is this music?" gate before hitting the network. |
+| `audio/audio_utils.py` | ALSA error silencing, UTF-8 console, Shazam metadata parsing, JSON dumps. |
+| **`display/`** | |
+| `display/display_base.py` | `BaseNowPlayingDisplay` — the shared foundation for both engines: driver/font bring-up, the fade state machine, state transitions (clock/status/song), the animated background, text marquee, refresh spinner, and the top-level frame compositing. Concrete engines only implement the left-side artwork. |
+| `display/album_sleeve.py` | Default engine (`AlbumSleeveDisplay`). Shows the album art as a flat sleeve with a spinning record peeking out behind it. |
+| `display/spinning_vinyl.py` | Alternate engine (`SpinningVinylDisplay`). Turns the art into a large spinning picture-disc record with a belt-drive motor and tonearm. |
+| `display/display_utils.py` | Image download/decode, surface signatures, color parsing, and drawing helpers shared by the engines. |
+| `display/screensaver.py` | Clock + drifting album-cover collage shown when idle. |
+| `display/text_scroller.py` | Synchronized marquee scroller — continuous news-ticker wrap-around, used by both engines. |
+| **`common/`** | |
+| `common/logger_utils.py` | Shared logging config with a custom `SUCCESS` level. |
+| `common/paths.py` | Central definitions of project paths (resources, ml-model, album cache, JSON) resolved from the repo root. |
+
+Both display engines subclass `BaseNowPlayingDisplay` and expose their own class,
+which `main.py` aliases to a common name on import — so the two engines are fully
+interchangeable while sharing nearly all their code. The only real difference
+between them is how the artwork on the left of the screen is drawn.
 
 ### Directories
 
@@ -191,17 +203,17 @@ sudo systemctl restart nowplaying
 ## Configuration
 
 - **Display engine:** choose at launch with `--display`:
-  `python main.py` (or `--display standard`) uses `display_engine.py`;
-  `python main.py --display vinyl` uses `display_engine_spinning_vinyl.py`.
+  `python main.py` (or `--display standard`) uses `display/album_sleeve.py`;
+  `python main.py --display vinyl` uses `display/spinning_vinyl.py`.
   To change the engine the **service** runs, either add the flag in `run.sh`
   (`exec python main.py --display vinyl`) or change `DEFAULT_DISPLAY` at the top
   of `main.py`. With no flag, the default is `standard`.
-- **Mic gain:** `software_gain` in `NowPlayingRecognizer.__init__` (`audio_engine.py`)
+- **Mic gain:** `software_gain` in `NowPlayingRecognizer.__init__` (`audio/audio_engine.py`)
   digitally boosts input (e.g. `1.8` = 180%).
-- **Mic debug dumps:** `self.debug_mic` in `audio_engine.py` writes the last captured
+- **Mic debug dumps:** `self.debug_mic` in `audio/audio_engine.py` writes the last captured
   audio to `debug_mic.wav` when `True`.
 - **Recognition tuning:** `record_seconds`, `max_retries`, and the ML confidence
-  threshold (`top_score > 0.15` in `music_detector.py`) control sensitivity and
+  threshold (`top_score > 0.15` in `audio/music_detector.py`) control sensitivity and
   latency.
 
 ## Troubleshooting
