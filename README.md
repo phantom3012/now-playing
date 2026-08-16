@@ -1,5 +1,9 @@
 # Now Playing — Ambient Music Display for Raspberry Pi
 
+![License](https://img.shields.io/badge/license-MIT-green)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-c51a4a)
+
 An always-on Raspberry Pi display that listens to the room, figures out what song
 is playing, and shows the album art. When nothing is playing it falls back to a
 clock screensaver with a drifting collage of previously-seen album covers.
