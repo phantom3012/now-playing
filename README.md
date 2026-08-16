@@ -7,6 +7,37 @@ clock screensaver with a drifting collage of previously-seen album covers.
 It runs headless as a `systemd` service and draws directly to the framebuffer via
 Pygame + `kmsdrm`, so it needs no desktop environment.
 
+## Screenshots
+
+The display follows the life of a song, from detection to recognition to art.
+
+When the room falls quiet, the app quietly samples audio and screens it locally
+for music — no network, no cloud, until there's a reason to reach out.
+
+![Listening to the room](demo-images/01-listening.png)
+
+Once music is confirmed, it queries for a match and bridges to the result.
+
+![Now Playing](demo-images/02-now-playing.png)
+
+**The default engine** presents the album art as a sleeve, with a record peeking
+out from behind it, over a background tinted from the cover's own palette.
+
+![Album sleeve engine](demo-images/03-album-sleeve.png)
+![Album sleeve engine](demo-images/03a-album-sleeve.png)
+
+**The alternate engine** (`--display vinyl`) turns the art into a spinning
+picture-disc record, complete with a belt-drive motor and tonearm.
+
+![Spinning vinyl engine](demo-images/04-spinning-vinyl.png)
+![Spinning vinyl engine](demo-images/04a-spinning-vinyl.png)
+
+When nothing is playing, it drifts into a clock screensaver — a slow collage of
+album covers it has seen before.
+
+![Clock screensaver](demo-images/05a-clock-screensaver.png)
+![Clock screensaver](demo-images/05-clock-screensaver.png)
+
 ## How it works
 
 The app runs two things concurrently on an `asyncio` loop:
