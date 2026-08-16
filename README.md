@@ -24,13 +24,13 @@ Once music is confirmed, it queries for a match and bridges to the result.
 
 ![Now Playing](demo-images/02-now-playing.png)
 
-**The default engine** presents the album art as a sleeve, with a record peeking
+**The Album Sleeve engine** presents the album art as a sleeve, with a record peeking
 out from behind it, over a background tinted from the cover's own palette.
 
 ![Album sleeve engine](demo-images/03-album-sleeve.png)
 ![Album sleeve engine](demo-images/03a-album-sleeve.png)
 
-**The alternate engine** (`--display vinyl`) turns the art into a spinning
+**The Spinning Vinyl engine** (`--display vinyl`) turns the art into a spinning
 picture-disc record, complete with a belt-drive motor and tonearm.
 
 ![Spinning vinyl engine](demo-images/04-spinning-vinyl.png)
@@ -81,8 +81,8 @@ at the root.
 | `audio/audio_utils.py` | ALSA error silencing, UTF-8 console, ShazamIO metadata parsing, JSON dumps. |
 | **`display/`** | |
 | `display/display_base.py` | `BaseNowPlayingDisplay` — the shared foundation for both engines: driver/font bring-up, the fade state machine, state transitions (clock/status/song), the animated background, text marquee, refresh spinner, and the top-level frame compositing. Concrete engines only implement the left-side artwork. |
-| `display/album_sleeve.py` | Default engine (`AlbumSleeveDisplay`). Shows the album art as a flat sleeve with a spinning record peeking out behind it. |
-| `display/spinning_vinyl.py` | Alternate engine (`SpinningVinylDisplay`). Turns the art into a large spinning picture-disc record with a belt-drive motor and tonearm. |
+| `display/album_sleeve.py` | AlbumSleeve engine (default) (`AlbumSleeveDisplay`). Shows the album art as a flat sleeve with a spinning record peeking out behind it. |
+| `display/spinning_vinyl.py` | SpinningVinyl engine (alternate) (`SpinningVinylDisplay`). Turns the art into a large spinning picture-disc record with a belt-drive motor and tonearm. |
 | `display/display_utils.py` | Image download/decode, surface signatures, color parsing, and drawing helpers shared by the engines. |
 | `display/screensaver.py` | Clock + drifting album-cover collage shown when idle. |
 | `display/text_scroller.py` | Synchronized marquee scroller — continuous news-ticker wrap-around, used by both engines. |
@@ -156,7 +156,7 @@ Manually, for testing:
 ```bash
 cd ~/now-playing
 source .venv/bin/activate
-python main.py                  # default "standard" engine
+python main.py                  # default album-sleeve engine
 python main.py --display vinyl  # spinning-vinyl engine
 python main.py --help           # list options
 ```
@@ -243,7 +243,7 @@ sudo systemctl restart nowplaying
   (`exec python main.py --display vinyl`) or change `DEFAULT_DISPLAY` at the top
   of `main.py`. With no flag, the default is `standard`.
 - **Mic gain:** `software_gain` in `NowPlayingRecognizer.__init__` (`audio/audio_engine.py`)
-  digitally boosts input (e.g. `1.8` = 180%).
+  digitally boosts input (e.g. `1.8` = 180%). This may vary from mic to mic. Boost this higher if the songs captured are generally quieter. Avoid boosting too much as it can garble the actual recording.
 - **Mic debug dumps:** `self.debug_mic` in `audio/audio_engine.py` writes the last captured
   audio to `debug_mic.wav` when `True`.
 - **Recognition tuning:** `record_seconds`, `max_retries`, and the ML confidence
@@ -259,7 +259,7 @@ sudo systemctl restart nowplaying
 
 ## Credits
 
-This project stands on several open-source pieces:
+This project stands on the shoulders of the giants mentioned below:
 
 - [**ShazamIO**](https://github.com/shazamio/ShazamIO) — the free, third-party
   asynchronous library used for cloud song recognition. It is built on a
