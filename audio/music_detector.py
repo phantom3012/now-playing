@@ -68,83 +68,100 @@ class MusicDetector:
             
         return music_indices
 
+    def _pcm_to_float32(self, raw_audio_bytes):
+        """Parses a raw 16-bit PCM buffer into a normalized float32 array (-1.0 to 1.0)."""
+        return np.frombuffer(raw_audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+
+    def _resample(self, audio_data, sample_rate, target_rate=16000):
+        """Resamples the audio to target_rate.
+
+        Uses fast NumPy block-averaging when the source rate is an exact integer
+        multiple of the target (e.g. 48000 -> 16000 is factor 3); otherwise falls
+        back to 1D linear interpolation."""
+        if sample_rate == target_rate:
+            return audio_data
+
+        if sample_rate % target_rate == 0:
+            # Perfect integer downsampling: average adjacent chunks (box filter)
+            factor = int(sample_rate / target_rate)
+            keep_len = (len(audio_data) // factor) * factor
+            return audio_data[:keep_len].reshape(-1, factor).mean(axis=1)
+
+        # Fallback for non-integer rates: fast 1D linear interpolation
+        duration = len(audio_data) / sample_rate
+        num_target_samples = int(duration * target_rate)
+        return np.interp(
+            np.linspace(0, len(audio_data) - 1, num_target_samples),
+            np.arange(len(audio_data)),
+            audio_data
+        )
+
+    def _run_inference(self, audio_data):
+        """Shapes the audio to the interpreter's expected input, runs inference,
+        and returns (top_class_index, top_score) from the mean predictions."""
+        input_shape = self.input_details[0]['shape']
+        expected_dims = len(input_shape)
+
+        # Shape the array to match exactly what the TFLite interpreter expects
+        if expected_dims == 2:
+            audio_data = np.expand_dims(audio_data, axis=0)
+
+        try:
+            self.interpreter.resize_tensor_input(self.input_details[0]['index'], audio_data.shape)
+            self.interpreter.allocate_tensors()
+        except RuntimeError:
+            # Interpreter has a fixed input size: center-crop or pad to fit
+            fixed_size = input_shape[-1]
+            audio_data = audio_data.flatten()
+
+            if len(audio_data) > fixed_size:
+                start = (len(audio_data) - fixed_size) // 2
+                audio_data = audio_data[start:start + fixed_size]
+            elif len(audio_data) < fixed_size:
+                audio_data = np.pad(audio_data, (0, fixed_size - len(audio_data)))
+
+            audio_data = audio_data.reshape(input_shape)
+
+        # Queue data inside input tensor buffers and run the model
+        self.interpreter.set_tensor(self.input_details[0]['index'], audio_data)
+        self.interpreter.invoke()
+
+        # Read output logits containing prediction percentages
+        predictions = self.interpreter.get_tensor(self.output_details[0]['index'])
+
+        mean_predictions = np.squeeze(predictions)
+        if len(mean_predictions.shape) == 2:
+            mean_predictions = np.mean(mean_predictions, axis=0)
+
+        top_class_index = int(np.argmax(mean_predictions))
+        top_score = float(mean_predictions[top_class_index])
+        return top_class_index, top_score
+
     def is_music_playing(self, raw_audio_bytes, sample_rate=48000):
         """Runs feed-forward inference on 1D PCM float32 arrays to spot target frequencies."""
         if not self.model_loaded:
             logger.warning("ML Engine bypassed: model parameters failed to load.")
-            return True 
+            return True
 
         try:
-            # 1. Parse raw 16-bit PCM buffer to normalized float32 array (-1.0 to 1.0)
-            audio_data = np.frombuffer(raw_audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-            
-            # 2. Resample cleanly to 16000 Hz using blistering fast NumPy block-averaging
-            target_rate = 16000
-            if sample_rate != target_rate:
-                if sample_rate % target_rate == 0:
-                    # Perfect integer downsampling (e.g. 48000 -> 16000 is exactly factor 3)
-                    factor = int(sample_rate / target_rate)
-                    # Truncate array to be a multiple of the factor
-                    keep_len = (len(audio_data) // factor) * factor
-                    # Reshape and average adjacent chunks (blazing fast box filter downsampler)
-                    audio_data = audio_data[:keep_len].reshape(-1, factor).mean(axis=1)
-                else:
-                    # Fallback for non-integer rates: Fast 1D linear interpolation
-                    duration = len(audio_data) / sample_rate
-                    num_target_samples = int(duration * target_rate)
-                    audio_data = np.interp(
-                        np.linspace(0, len(audio_data) - 1, num_target_samples),
-                        np.arange(len(audio_data)),
-                        audio_data
-                    )
+            # 1. Raw PCM -> normalized float32, then resample to the model's rate
+            audio_data = self._pcm_to_float32(raw_audio_bytes)
+            audio_data = self._resample(audio_data, sample_rate)
 
             if len(audio_data) == 0:
                 logger.warning("Empty audio block passed for inference.")
                 return False
 
-            input_shape = self.input_details[0]['shape']
-            expected_dims = len(input_shape)
-            
-            # 3. Shape the array to match exactly what the TFLite interpreter expects
-            if expected_dims == 2:
-                audio_data = np.expand_dims(audio_data, axis=0) 
-                
-            try:
-                self.interpreter.resize_tensor_input(self.input_details[0]['index'], audio_data.shape)
-                self.interpreter.allocate_tensors()
-            except RuntimeError:
-                fixed_size = input_shape[-1]
-                audio_data = audio_data.flatten()
-                
-                if len(audio_data) > fixed_size:
-                    start = (len(audio_data) - fixed_size) // 2
-                    audio_data = audio_data[start:start + fixed_size]
-                elif len(audio_data) < fixed_size:
-                    audio_data = np.pad(audio_data, (0, fixed_size - len(audio_data)))
-                    
-                audio_data = audio_data.reshape(input_shape)
+            # 2. Run the model and get the winning class + confidence
+            top_class_index, top_score = self._run_inference(audio_data)
 
-            # 4. Queue data inside input tensor buffers
-            self.interpreter.set_tensor(self.input_details[0]['index'], audio_data)
-            self.interpreter.invoke()
-
-            # 5. Read output logits containing prediction percentages
-            predictions = self.interpreter.get_tensor(self.output_details[0]['index'])
-            
-            mean_predictions = np.squeeze(predictions)
-            if len(mean_predictions.shape) == 2:
-                mean_predictions = np.mean(mean_predictions, axis=0)
-                
-            top_class_index = int(np.argmax(mean_predictions))
-            top_score = float(mean_predictions[top_class_index])
-            
-            # 6. Match top index against loaded music categories
+            # 3. Match top index against loaded music categories
             if top_class_index in self.music_classes and top_score > 0.15:
                 category_name = getattr(self, 'class_names', {}).get(top_class_index, "Unknown")
                 logger.success(f"ML Match Detected! Category: {category_name} ({top_class_index}) (Confidence: {top_score:.2f})")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Inference pipeline exception: {e}")
-            
+
         return False

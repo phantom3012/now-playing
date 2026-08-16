@@ -200,7 +200,7 @@ class NowPlayingRecognizer:
                 logger.info("Querying Shazam Cloud...")
                 result = await self.shazam.recognize(wav_bytes)
                 
-                audio_utils.dump_metadata_json(result, filepath="now_playing.json")
+                audio_utils.dump_metadata_json(result, filepath=paths.NOW_PLAYING_JSON)
                 parsed_result = audio_utils.parse_shazam_metadata(result)
                 
                 if parsed_result.get('is_recognized'):
@@ -218,7 +218,7 @@ class NowPlayingRecognizer:
             
             except asyncio.TimeoutError:
                 error_state = {'is_recognized': False, 'error': 'Timeout'}
-                audio_utils.dump_metadata_json(error_state, filepath="now_playing.json")
+                audio_utils.dump_metadata_json(error_state, filepath=paths.NOW_PLAYING_JSON)
                 
                 if retry_count >= max_retries:
                     logger.error(f"Recognition timed out after {max_retries} retries.")
@@ -231,7 +231,7 @@ class NowPlayingRecognizer:
                 
             except Exception as e:
                 error_state = {'is_recognized': False, 'error': str(e)}
-                audio_utils.dump_metadata_json(error_state, filepath="now_playing.json")
+                audio_utils.dump_metadata_json(error_state, filepath=paths.NOW_PLAYING_JSON)
 
                 # Detect network/DNS failures to append a "No internet connection" sub-line
                 err_text = str(e).lower()
